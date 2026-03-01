@@ -14,6 +14,10 @@ import functools
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
 import secrets
+import warnings
+from sqlalchemy import exc as sa_exc
+warnings.simplefilter("default")
+warnings.simplefilter("ignore", category=sa_exc.LegacyAPIWarning)
 
 # Configure logging
 logging.basicConfig(
@@ -110,7 +114,7 @@ class User(db.Model, UserMixin):
     role = db.Column(db.String(20), nullable=False, default='patient')  # admin, doctor, patient
     totp_secret = db.Column(db.String(32), nullable=True)  # For 2FA
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     last_login = db.Column(db.DateTime, nullable=True)
     
     # Relationship to patient
@@ -154,8 +158,8 @@ class Patient(db.Model):
     address_encrypted = db.Column(db.Text, nullable=False)
     phone_encrypted = db.Column(db.Text, nullable=False)
     doctor_encrypted = db.Column(db.Text, nullable = False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
     # Medical records relationship
     medical_records = db.relationship('MedicalRecord', backref='patient', lazy=True)
@@ -221,8 +225,8 @@ class MedicalRecord(db.Model):
     treatment_encrypted = db.Column(db.Text, nullable=True)
     medication_encrypted = db.Column(db.Text, nullable=True)
     notes_encrypted = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
     # Doctor relationship
     doctor = db.relationship('User', backref='medical_records')
@@ -265,7 +269,7 @@ class AuditLog(db.Model):
     action = db.Column(db.String(50), nullable=False)
     table_name = db.Column(db.String(50), nullable=False)
     record_id = db.Column(db.Integer, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now)
     ip_address = db.Column(db.String(45), nullable=True)
     user_agent = db.Column(db.String(255), nullable=True)
     details = db.Column(db.Text, nullable=True)
@@ -342,7 +346,7 @@ def login():
             else:
                 # If 2FA is not set up, log in directly (only for testing)
                 login_user(user)
-                user.last_login = datetime.utcnow()
+                user.last_login = datetime.now()
                 db.session.commit()
                 
                 logger.info(f"User {user.id} logged in without 2FA")
@@ -366,7 +370,7 @@ def verify_2fa():
         
         if user and user.verify_totp(totp_code):
             login_user(user)
-            user.last_login = datetime.utcnow()
+            user.last_login = datetime.now()
             db.session.commit()
             session.pop('user_id_for_2fa', None)
             
